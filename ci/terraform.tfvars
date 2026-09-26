@@ -1,13 +1,3 @@
-github_repositories = {
-  terraform-modules = {
-    owner             = "ai-platform-portfolio"
-    owner_id          = "334196300"
-    name              = "terraform-modules"
-    repository_id     = "1389557192"
-    apply_environment = "central-apply"
-  }
-}
-
 network = {
   resource_group_name = "portfolio-shared-network-rg"
   location            = "uksouth"

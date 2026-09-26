@@ -36,7 +36,8 @@ class PlanPreviewTest(unittest.TestCase):
         TF_STATE_CONTAINER="state",
     )
     @patch("plan_preview.subprocess.run")
-    def test_authentication_failure_has_a_safe_failure_comment(self, run):
+    @patch("plan_preview.verify")
+    def test_authentication_failure_has_a_safe_failure_comment(self, verify, run):
         run.return_value = subprocess.CompletedProcess(
             [], 1, "", "AADSTS700213 private details"
         )

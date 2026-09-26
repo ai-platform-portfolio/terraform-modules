@@ -59,7 +59,7 @@ is not a deployment queue for every commit.
 
 GitHub environments are configured. `module.deployment_identity` creates
 `ai-platform-central-deployment` in `ai-platform-ci-rg`, with a PR and an apply
-federation per entry in `github_repositories` in `terraform.tfvars`. Adding a
+federation per entry in `github_repositories` in `github.auto.tfvars.json`. Adding a
 repository extends that map, not the MI count. The control repository retains
 its existing Terraform credential addresses to avoid replacement. The MI supports
 at most ten repositories with this two-credential pattern. Its name has no regional
@@ -102,6 +102,11 @@ the sandbox. Keep the apply environment's required reviewer and main-only policy
 The obsolete `central-plan` environment is no longer referenced by any workflow.
 Azure federation provisioning requires an owner-approved Terraform bootstrap
 plan; a repository merge does not provide that approval.
+
+Before initialization, the PR job checks required fields against GitHub's live
+repository metadata and compares an actual GitHub-issued token's issuer, audience
+and subject with the proposed PR trust. Tokens stay in memory and are not logged.
+The JSON tfvars file is the same input consumed by Terraform and this check.
 
 Mocked tests check the exact subjects and map expansion. They do not prove live
 authentication. After bootstrap, the PR job must successfully exchange its token,

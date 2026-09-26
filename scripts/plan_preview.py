@@ -6,6 +6,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from federation_contract import verify
+
 MARKER = "<!-- central-infrastructure-plan -->"
 
 
@@ -94,6 +96,18 @@ def publish(number, head, body):
 
 
 def preview(saved):
+    def repository(name):
+        return json.loads(
+            subprocess.check_output(["gh", "api", f"repos/{name}"], text=True)
+        )
+
+    try:
+        verify(repository)
+    except (KeyError, ValueError, OSError, subprocess.CalledProcessError):
+        return (
+            "failed",
+            "Federation contract check failed: verify required fields, GitHub repository IDs and the actual PR token claims.",
+        )
     init = [
         "init",
         "-input=false",
