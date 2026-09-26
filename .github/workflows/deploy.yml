@@ -7,15 +7,12 @@ on:
       - 'ci/**'
       - 'modules/**'
       - 'scripts/deployment_plan.py'
+      - 'scripts/federation_contract.py'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: central-infrastructure
-  cancel-in-progress: false
 
 env:
   TF_IN_AUTOMATION: 'true'
@@ -34,7 +31,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: central-apply
+    environment: central-plan
     permissions:
       contents: read
       id-token: write
@@ -65,6 +62,10 @@ jobs:
         with:
           terraform_version: 1.12.2
           terraform_wrapper: false
+      - name: Verify planning federation contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/federation_contract.py
       - run: >-
           terraform -chdir=ci init -input=false -lockfile=readonly -backend-config=backend.hcl
           -backend-config="resource_group_name=$TF_STATE_RESOURCE_GROUP"
@@ -79,6 +80,9 @@ jobs:
         run: rm -f "$RUNNER_TEMP/review.tfplan"
 
   apply:
+    concurrency:
+      group: central-infrastructure
+      cancel-in-progress: false
     needs: plan
     if: needs.plan.outputs.changes == 'true'
     runs-on: ubuntu-latest

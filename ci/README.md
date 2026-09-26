@@ -17,7 +17,7 @@ Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 
 `.github/workflows/deploy.yml` runs on relevant merges to `main` and manual
 dispatches from `main`. `.github/workflows/plan.yml` authenticates and runs a real
-OpenTofu 1.12.3 plan for same-repository PRs without a GitHub environment. Fork PRs do not receive
+OpenTofu 1.12.3 plan for same-repository PRs using `central-plan`. Fork PRs do not receive
 the deployment identity. All of these jobs use the same sandbox Owner MI; PR
 planning is not a read-only identity boundary.
 
@@ -32,8 +32,9 @@ PR previews use `opentofu.lock.hcl`, copied to the runner's active lock filename
 Main deployment still uses Terraform 1.12.2 and its existing lock; the read-only
 preview does not migrate live state or change the deployment engine.
 
-1. `plan` authenticates using GitHub OIDC and the `central-apply` environment.
-   Approve this environment before the main plan job starts.
+1. `plan` authenticates using GitHub OIDC and the `central-plan` environment.
+   This environment has no reviewers, wait timer or branch restriction: PR and
+   fresh main plans start without approval, including while an apply awaits review.
    Both jobs use the dedicated sandbox Owner identity, as approved by the owner.
    The plan command does not apply resources, but its identity is write-capable.
    Terraform takes a state lease during planning.
@@ -51,14 +52,14 @@ preview does not migrate live state or change the deployment engine.
    state causes Terraform to reject it. Failed applies require investigation and
    a new reviewed plan; there is no automatic rollback or unreviewed retry.
 
-Runs are serialized and an active apply is not cancelled by a newer merge.
-GitHub can replace an older pending run with the newest pending run. This workflow
-is not a deployment queue for every commit.
+Only apply jobs are serialized; an active apply is not cancelled by a newer merge.
+GitHub can replace an older pending apply with the newest pending apply. Planning
+is independent of this queue and runs fresh on every relevant main push.
 
 ### Azure bootstrap
 
 GitHub environments are configured. `module.deployment_identity` creates
-`ai-platform-central-deployment` in `ai-platform-ci-rg`, with a PR and an apply
+`ai-platform-central-deployment` in `ai-platform-ci-rg`, with a plan and an apply
 federation per entry in `github_repositories` in `github.auto.tfvars.json`. Adding a
 repository extends that map, not the MI count. The control repository retains
 its existing Terraform credential addresses to avoid replacement. The MI supports
@@ -91,26 +92,25 @@ restricted permissions; saved Terraform plans and state still contain these valu
 The federated subjects must be:
 
 ```
-repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:pull_request
+repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-plan
 repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-apply
 ```
 
 Issuer: `https://token.actions.githubusercontent.com`; audience:
-`api://AzureADTokenExchange`. There is no per-branch or plan-environment credential.
+`api://AzureADTokenExchange`. There is no per-branch or PR-context credential.
 This explicitly trusts PR jobs with the shared Owner permissions, as chosen for
 the sandbox. Keep the apply environment's required reviewer and main-only policy.
-The obsolete `central-plan` environment is no longer referenced by any workflow.
 Azure federation provisioning requires an owner-approved Terraform bootstrap
 plan; a repository merge does not provide that approval.
 
-Before initialization, the PR job checks required fields against GitHub's live
+Before initialization, both planning jobs check required fields against GitHub's live
 repository metadata and compares an actual GitHub-issued token's issuer, audience
-and subject with the proposed PR trust. Tokens stay in memory and are not logged.
+and subject with the proposed plan environment trust. Tokens stay in memory and are not logged.
 The JSON tfvars file is the same input consumed by Terraform and this check.
 
 Mocked tests check the exact subjects and map expansion. They do not prove live
 authentication. After bootstrap, the PR job must successfully exchange its token,
-initialize the real backend and plan. The protected main jobs must also pass
+initialize the real backend and plan. The main jobs must also pass
 authentication in their distinct environment context before deployment is called
 verified. Never print OIDC tokens or persist them as artifacts.
 
