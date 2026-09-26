@@ -13,6 +13,52 @@ The storage resource group's old organisation name is an Azure name, not a
 GitHub dependency. Backend authentication uses Entra ID; no account key is needed.
 Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 
+## Deployment workflow
+
+`.github/workflows/deploy.yml` runs on relevant merges to `main` and manual
+dispatches from `main`. PRs run validation without Azure credentials.
+
+1. `plan` authenticates using GitHub OIDC and the `central-plan` environment.
+   Its Azure identity needs read-only infrastructure and state access. Planning
+   uses `-lock=false` because this identity cannot acquire a write lease.
+2. Review the Terraform plan log, commit and fingerprint in the run summary.
+   No-change plans skip deployment. Saved plans stay on the temporary runner;
+   no state or plan files are uploaded to GitHub artifacts.
+3. Approve `central-apply` through **Review deployments** on that workflow run.
+   The environment requires `michaela-links`, permits only `main`, and disables
+   administrator bypass. Self-review remains enabled for the solo portfolio owner.
+4. The apply job rejects a superseded commit and produces a fresh, locked plan.
+   Its complete JSON fingerprint must match the reviewed plan, excluding only
+   the generation timestamp. Drift or changed values require a new run and approval.
+5. Apply executes that verified saved plan with Terraform state locking. A stale
+   state causes Terraform to reject it. Failed applies require investigation and
+   a new reviewed plan; there is no automatic rollback or unreviewed retry.
+
+Runs are serialized and an active apply is not cancelled by a newer merge.
+GitHub can replace an older pending run with the newest pending run. This workflow
+is not a deployment queue for every commit.
+
+### Azure bootstrap
+
+GitHub environments are configured, but Azure federation and role assignments
+must be provisioned before the workflow can authenticate. The old identity has
+subscription-wide Owner access and is not configured for this workflow.
+
+Set repository variables `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`. Set
+`AZURE_CLIENT_ID` separately in `central-plan` and `central-apply`. These are
+identifiers, not credentials. No Azure client secret or storage key is used.
+The federated subjects must be:
+
+```
+repo:ai-platform-portfolio/terraform-modules:environment:central-plan
+repo:ai-platform-portfolio/terraform-modules:environment:central-apply
+```
+
+Issuer: `https://token.actions.githubusercontent.com`; audience:
+`api://AzureADTokenExchange`. Federation must not trust pull-request subjects.
+Azure identity/permission provisioning requires an owner-approved Terraform
+bootstrap plan; a repository merge does not provide that approval.
+
 ## Network ownership migration
 
 Completed on 2026-09-26; see [validation evidence](migrations/VALIDATION.md).
