@@ -14,6 +14,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      pull-requests: write
     env:
       TF_IN_AUTOMATION: 'true'
       ARM_USE_OIDC: 'true'
@@ -26,19 +27,16 @@ jobs:
       TF_STATE_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_RESOURCE_NAME }}
       TF_STATE_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
       TF_VAR_state_container_scope: ${{ secrets.TF_BACKEND_CONTAINER_SCOPE }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4
         with:
-          terraform_version: 1.12.2
-          terraform_wrapper: false
-      - name: Authenticate and initialize state
-        run: >-
-          terraform -chdir=ci init -input=false -lockfile=readonly -backend-config=backend.hcl
-          -backend-config="resource_group_name=$TF_STATE_RESOURCE_GROUP"
-          -backend-config="storage_account_name=$TF_STATE_STORAGE_ACCOUNT"
-          -backend-config="container_name=$TF_STATE_CONTAINER"
-      - name: Plan proposed infrastructure
-        run: terraform -chdir=ci plan -input=false -lock-timeout=5m
+          tofu_version: 1.12.3
+          tofu_wrapper: false
+      - name: Plan and update PR preview
+        run: |
+          cp ci/opentofu.lock.hcl ci/.terraform.lock.hcl
+          python3 scripts/plan_preview.py

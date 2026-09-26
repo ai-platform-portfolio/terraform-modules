@@ -7,7 +7,7 @@ mock_provider "azurerm" {
 }
 
 variables {
-    state_container_scope = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test/providers/Microsoft.Storage/storageAccounts/test/blobServices/default/containers/state"
+  state_container_scope = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test/providers/Microsoft.Storage/storageAccounts/test/blobServices/default/containers/state"
 }
 
 run "github_subject_matches_observed_repository_claim" {
@@ -37,7 +37,7 @@ run "another_repository_reuses_the_identity" {
   }
 
   assert {
-    condition = length(local.github_subjects) == 4 && length(module.deployment_identity.workloads) == 1 && local.github_subjects["workload-pr"] == "repo:example@123/workload@789:pull_request" && local.github_subjects["workload-apply"] == "repo:example@123/workload@789:environment:deploy"
+    condition     = length(local.github_subjects) == 4 && length(module.deployment_identity.workloads) == 1 && local.github_subjects["workload-pr"] == "repo:example@123/workload@789:pull_request" && local.github_subjects["workload-apply"] == "repo:example@123/workload@789:environment:deploy"
     error_message = "Adding a repository must add exactly two subjects without adding another managed identity."
   }
 }

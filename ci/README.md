@@ -17,9 +17,20 @@ Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 
 `.github/workflows/deploy.yml` runs on relevant merges to `main` and manual
 dispatches from `main`. `.github/workflows/plan.yml` authenticates and runs a real
-plan for same-repository PRs without a GitHub environment. Fork PRs do not receive
+OpenTofu 1.12.3 plan for same-repository PRs without a GitHub environment. Fork PRs do not receive
 the deployment identity. All of these jobs use the same sandbox Owner MI; PR
 planning is not a read-only identity boundary.
+
+The PR job updates one bot comment with its head commit and collapsible plan.
+Initialization or authentication errors post a failed preview and fail the check.
+Plan values marked sensitive stay hidden; Azure IDs, configured backend identifiers,
+storage-account names and Key Vault names are redacted before publishing. Raw plans
+are deleted on the runner and never uploaded. Superseded runs cannot update the
+current revision's comment. A success requires a real backend-connected plan.
+
+PR previews use `opentofu.lock.hcl`, copied to the runner's active lock filename.
+Main deployment still uses Terraform 1.12.2 and its existing lock; the read-only
+preview does not migrate live state or change the deployment engine.
 
 1. `plan` authenticates using GitHub OIDC and the `central-apply` environment.
    Approve this environment before the main plan job starts.
