@@ -43,6 +43,12 @@ PR previews use `opentofu.lock.hcl`, copied to the runner's active lock filename
 Main deployment still uses Terraform 1.12.2 and its existing lock; the read-only
 preview does not migrate live state or change the deployment engine.
 
+Deployment validation uses Terraform with `-lockfile=readonly`, matching main;
+the OpenTofu preview alone does not validate the deployment engine's lock file.
+When updating the deployment provider, generate checksums for both CI and local
+development: `terraform -chdir=ci providers lock -platform=linux_amd64 -platform=darwin_arm64`.
+Commit the resulting lock file. The Linux PR validation must pass without updating it.
+
 1. `plan` authenticates using GitHub OIDC and the `central-plan` environment.
    This environment has no reviewers, wait timer or branch restriction: PR and
    fresh main plans start without approval, including while an apply awaits review.
