@@ -10,9 +10,9 @@ run "ci_identity_has_no_region_suffix_or_kubernetes_subject" {
     create_resource_group = true
     workloads = {
       ci = {
-        federated_subject = "repo:example/platform:environment:plan"
+        federated_subject = "repo:example@123/platform@456:environment:plan"
         extra_federated_subjects = {
-          apply = "repo:example/platform:environment:apply"
+          apply = "repo:example@123/platform@456:environment:apply"
         }
       }
     }
@@ -23,7 +23,7 @@ run "ci_identity_has_no_region_suffix_or_kubernetes_subject" {
     error_message = "The CI identity must use the requested resource group and omit the regional suffix."
   }
   assert {
-    condition     = azurerm_federated_identity_credential.this["ci"].subject == "repo:example/platform:environment:plan" && azurerm_federated_identity_credential.extra["ci.apply"].subject == "repo:example/platform:environment:apply"
+    condition     = azurerm_federated_identity_credential.this["ci"].subject == "repo:example@123/platform@456:environment:plan" && azurerm_federated_identity_credential.extra["ci.apply"].subject == "repo:example@123/platform@456:environment:apply"
     error_message = "Both GitHub environment subjects must be preserved without synthesizing a Kubernetes subject."
   }
 }
