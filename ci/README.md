@@ -19,8 +19,9 @@ Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 dispatches from `main`. PRs run validation without Azure credentials.
 
 1. `plan` authenticates using GitHub OIDC and the `central-plan` environment.
-   Its Azure identity needs read-only infrastructure and state access. Planning
-   uses `-lock=false` because this identity cannot acquire a write lease.
+   Both jobs use the dedicated sandbox Owner identity, as approved by the owner.
+   The plan command does not apply resources, but its identity is write-capable.
+   Terraform takes a state lease during planning.
 2. Review the Terraform plan log, commit and fingerprint in the run summary.
    No-change plans skip deployment. Saved plans stay on the temporary runner;
    no state or plan files are uploaded to GitHub artifacts.
@@ -40,13 +41,26 @@ is not a deployment queue for every commit.
 
 ### Azure bootstrap
 
-GitHub environments are configured, but Azure federation and role assignments
-must be provisioned before the workflow can authenticate. The old identity has
-subscription-wide Owner access and is not configured for this workflow.
+GitHub environments are configured. `module.deployment_identity` creates
+`ai-platform-central-deployment` in `ai-platform-ci-rg`, with two GitHub environment
+federations. Its name has no regional suffix; its Azure location is independent
+of its subscription-wide deployment permissions. The old organisation's identity
+is untouched.
+
+Subscription Owner is an explicit sandbox decision. Storage Blob Data Contributor
+on the existing `tfstate` container supplies state data-plane access; Owner alone
+does not supply that access. This container also holds legacy state. Workload
+identities should receive permissions appropriate to their individual workloads.
+
+The initial local bootstrap apply must create this identity and its credentials before GitHub
+can authenticate. That apply also includes the approved, unapplied functions
+subnet. Subsequent changes use this workflow and its deployment approval gate.
 
 Set repository variables `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`. Set
 `AZURE_CLIENT_ID` separately in `central-plan` and `central-apply`. These are
 identifiers, not credentials. No Azure client secret or storage key is used.
+After bootstrap, use the `deployment_client_id` Terraform output for both
+environment variables; do not use the old organisation's client ID.
 The federated subjects must be:
 
 ```
@@ -56,8 +70,8 @@ repo:ai-platform-portfolio/terraform-modules:environment:central-apply
 
 Issuer: `https://token.actions.githubusercontent.com`; audience:
 `api://AzureADTokenExchange`. Federation must not trust pull-request subjects.
-Azure identity/permission provisioning requires an owner-approved Terraform
-bootstrap plan; a repository merge does not provide that approval.
+Azure federation provisioning requires an owner-approved Terraform bootstrap
+plan; a repository merge does not provide that approval.
 
 ## Network ownership migration
 

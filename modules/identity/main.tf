@@ -12,7 +12,7 @@ locals {
   # names baked into the module.
   workload_names = {
     for k, w in var.workloads :
-    k => "${var.name_prefix}-${replace(k, "_", "-")}-${var.loc_short}"
+    k => join("-", compact([var.name_prefix, replace(k, "_", "-"), var.loc_short]))
   }
 
   # Flatten any per-workload extra federated subjects into a single map keyed
@@ -28,12 +28,20 @@ locals {
   ]...)
 }
 
+resource "azurerm_resource_group" "this" {
+  count    = var.create_resource_group ? 1 : 0
+  name     = var.resource_group_name
+  location = var.location
+  tags     = var.tags
+}
+
 resource "azurerm_user_assigned_identity" "this" {
   for_each            = var.workloads
   name                = local.workload_names[each.key]
   resource_group_name = var.resource_group_name
   location            = var.location
   tags                = var.tags
+  depends_on          = [azurerm_resource_group.this]
 }
 
 resource "azurerm_federated_identity_credential" "this" {
@@ -43,7 +51,7 @@ resource "azurerm_federated_identity_credential" "this" {
 
   audience = ["api://AzureADTokenExchange"]
   issuer   = var.oidc_issuer_url
-  subject  = "system:serviceaccount:${each.value.namespace}:${each.value.sa_name}"
+  subject  = each.value.federated_subject != null ? each.value.federated_subject : "system:serviceaccount:${each.value.namespace}:${each.value.sa_name}"
 }
 
 # Additional federations for a workload's UAMI (generalised form of the old
@@ -57,4 +65,12 @@ resource "azurerm_federated_identity_credential" "extra" {
   audience = ["api://AzureADTokenExchange"]
   issuer   = var.oidc_issuer_url
   subject  = each.value.subject
+}
+
+resource "azurerm_role_assignment" "this" {
+  for_each             = var.role_assignments
+  scope                = each.value.scope
+  role_definition_name = each.value.role_definition_name
+  principal_id         = azurerm_user_assigned_identity.this[each.value.workload].principal_id
+  principal_type       = "ServicePrincipal"
 }

@@ -63,8 +63,8 @@ jobs:
           terraform_version: 1.12.2
           terraform_wrapper: false
       - run: terraform -chdir=ci init -input=false -lockfile=readonly -backend-config=backend.hcl
-      - name: Plan with read-only Azure permissions
-        run: terraform -chdir=ci plan -input=false -lock=false -out="$RUNNER_TEMP/review.tfplan"
+      - name: Plan central infrastructure
+        run: terraform -chdir=ci plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/review.tfplan"
       - id: review
         run: python3 scripts/deployment_plan.py "$RUNNER_TEMP/review.tfplan"
       - name: Remove local plan
