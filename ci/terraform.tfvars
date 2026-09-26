@@ -35,3 +35,19 @@ network = {
     openai   = "privatelink.openai.azure.com"
   }
 }
+
+deployment_identity = {
+  resource_group_name = "ai-platform-ci-rg"
+  name_prefix         = "ai-platform"
+  location            = "uksouth"
+  roles = {
+    sandbox = {
+      scope_suffix         = ""
+      role_definition_name = "Owner"
+    }
+    state = {
+      scope_suffix         = ""
+      role_definition_name = "Storage Blob Data Contributor"
+    }
+  }
+}

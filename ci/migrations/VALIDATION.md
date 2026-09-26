@@ -1,6 +1,6 @@
 # Network migration validation
 
-Prepared on 2026-09-26 from `localtfsa/tfstate/auth0.tfstate`, serial 14,
+Prepared on 2026-09-26 from the existing backend's `auth0.tfstate`, serial 14,
 using Terraform 1.12.2 and AzureRM 4.81.0.
 
 - Ten network instances moved into `module.network` in local state copies.

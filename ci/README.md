@@ -8,10 +8,77 @@ for Flex Consumption. It is separate from the ACA and private-endpoint subnets.
 Function integration uses `module.network.subnet_ids["functions"]`.
 Every apply still requires explicit owner approval.
 
-State remains in `localtfsa/tfstate`, using the `central-devops.tfstate` key.
-The storage resource group's old organisation name is an Azure name, not a
-GitHub dependency. Backend authentication uses Entra ID; no account key is needed.
+State remains in the existing Azure Storage backend, using the `central-devops.tfstate` key.
+Backend names are supplied from Secrets at initialization. Backend authentication
+uses Entra ID; no account key is needed.
 Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
+
+## Deployment workflow
+
+`.github/workflows/deploy.yml` runs on relevant merges to `main` and manual
+dispatches from `main`. PRs run validation without Azure credentials.
+
+1. `plan` authenticates using GitHub OIDC and the `central-plan` environment.
+   Both jobs use the dedicated sandbox Owner identity, as approved by the owner.
+   The plan command does not apply resources, but its identity is write-capable.
+   Terraform takes a state lease during planning.
+2. Review the Terraform plan log, commit and fingerprint in the run summary.
+   No-change plans skip deployment. Saved plans stay on the temporary runner;
+   no state or plan files are uploaded to GitHub artifacts.
+3. Approve `central-apply` through **Review deployments** on that workflow run.
+   The environment requires `michaela-links`, permits only `main`, and disables
+   administrator bypass. Self-review remains enabled for the solo portfolio owner.
+4. The apply job rejects a superseded commit and produces a fresh, locked plan.
+   Its complete JSON fingerprint must match the reviewed plan, excluding only
+   the generation timestamp. Drift or changed values require a new run and approval.
+5. Apply executes that verified saved plan with Terraform state locking. A stale
+   state causes Terraform to reject it. Failed applies require investigation and
+   a new reviewed plan; there is no automatic rollback or unreviewed retry.
+
+Runs are serialized and an active apply is not cancelled by a newer merge.
+GitHub can replace an older pending run with the newest pending run. This workflow
+is not a deployment queue for every commit.
+
+### Azure bootstrap
+
+GitHub environments are configured. `module.deployment_identity` creates
+`ai-platform-central-deployment` in `ai-platform-ci-rg`, with two GitHub environment
+federations. Its name has no regional suffix; its Azure location is independent
+of its subscription-wide deployment permissions. The old organisation's identity
+is untouched.
+
+Subscription Owner is an explicit sandbox decision. Storage Blob Data Contributor
+on the existing `tfstate` container supplies state data-plane access; Owner alone
+does not supply that access. This container also holds legacy state. Workload
+identities should receive permissions appropriate to their individual workloads.
+
+The initial local bootstrap apply must create this identity and its credentials before GitHub
+can authenticate. That apply also includes the approved, unapplied functions
+subnet. Subsequent changes use this workflow and its deployment approval gate.
+
+Store `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` and `AZURE_CLIENT_ID` as
+organization Actions secrets, granting access to this repository. Keep these
+identifiers out of Actions Variables. Authentication
+still uses OIDC; no Azure client secret or storage key is used.
+After bootstrap, use the `deployment_client_id` Terraform output for the
+organization secret; do not use the old organisation's client ID.
+Store backend identifiers in organization secrets `TF_BACKEND_RESOURCE_GROUP`,
+`TF_BACKEND_RESOURCE_NAME` (the storage account), `TF_BACKEND_CONTAINER` and
+`TF_BACKEND_CONTAINER_SCOPE`. Grant this repository access to those secrets.
+Storage-account and Key Vault names must not appear in tracked configuration or
+documentation. Local bootstrap inputs live under ignored `.migration/` with
+restricted permissions; saved Terraform plans and state still contain these values.
+The federated subjects must be:
+
+```
+repo:ai-platform-portfolio/terraform-modules:environment:central-plan
+repo:ai-platform-portfolio/terraform-modules:environment:central-apply
+```
+
+Issuer: `https://token.actions.githubusercontent.com`; audience:
+`api://AzureADTokenExchange`. Federation must not trust pull-request subjects.
+Azure federation provisioning requires an owner-approved Terraform bootstrap
+plan; a repository merge does not provide that approval.
 
 ## Network ownership migration
 

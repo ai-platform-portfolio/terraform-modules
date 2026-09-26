@@ -17,3 +17,21 @@ variable "network" {
     tags              = optional(map(string), {})
   })
 }
+
+variable "deployment_identity" {
+  type = object({
+    resource_group_name = string
+    name_prefix         = string
+    location            = string
+    roles = map(object({
+      scope_suffix         = string
+      role_definition_name = string
+    }))
+  })
+}
+
+variable "state_container_scope" {
+  description = "Existing Terraform state container resource ID, supplied from a secret."
+  type        = string
+  sensitive   = true
+}
