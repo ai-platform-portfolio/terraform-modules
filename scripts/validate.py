@@ -15,6 +15,7 @@ def main():
         for path in (root / parent).iterdir()
         if path.is_dir()
     )
+    directories.append(root / "ci")
     failures = []
     for directory in directories:
         try:

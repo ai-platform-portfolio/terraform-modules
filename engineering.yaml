@@ -1,9 +1,18 @@
 version: 1
 terraform:
-  roots: [modules]
+  roots: [modules, ci]
   profile: module
   approved_repositories: [ai-platform-portfolio/terraform-modules]
   collections:
+    - files: modules/network/*
+      type: azurerm_subnet
+      expression: var.subnets
+    - files: modules/network/*
+      type: azurerm_private_dns_zone
+      expression: var.private_dns_zones
+    - files: modules/network/*
+      type: azurerm_private_dns_zone_virtual_network_link
+      expression: var.private_dns_zones
     - files: modules/identity/*
       type: azurerm_user_assigned_identity
       expression: var.workloads
@@ -21,4 +30,9 @@ duplication:
   min_lines: 5
 exclude: [examples/*, scripts/*]
 protected_paths: [engineering.yaml, '.github/*']
-exceptions: []
+exceptions:
+  - rule: TF002
+    file: ci/main.tf
+    symbol: network
+    reason: Central deployment composes the network module from the same reviewed repository revision.
+    owner: michaela-links

@@ -34,6 +34,7 @@ breaking interface changes (required `database_name`, map-based identity
 
 | Module | Purpose |
 |--------|---------|
+| `network` | Shared VNet, map-driven subnets and private DNS zones with VNet links |
 | `auth0` | Auth0 resource servers (APIs), clients (incl. M2M), grants, KV secret sync |
 | `identity` | User-assigned managed identities + OIDC federation for workloads |
 | `storage` | Storage account + role assignments for workload principals |

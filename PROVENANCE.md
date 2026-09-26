@@ -18,3 +18,8 @@ and interfaces are not retrospectively rewritten to satisfy new policies.
 Backend-free validation passed for all seven modules and five examples using
 Terraform 1.12.2. All 13 supplied mocked plan tests passed. Provider selections
 are recorded in validation lock files; no live infrastructure was contacted.
+
+The shared network from `terraform/network.tf` at the same source revision is
+now represented by `modules/network` and composed in `ci/`. Its subnet and DNS
+resources use maps; existing names and allocations are preserved in `ci/terraform.tfvars`.
+See `ci/README.md` for the separate state-ownership migration and approval gates.

@@ -4,3 +4,4 @@
 crash.log
 reports/
 __pycache__/
+.migration/

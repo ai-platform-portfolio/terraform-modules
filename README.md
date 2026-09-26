@@ -1,7 +1,7 @@
 # Terraform modules
 
-Reusable modules for `ai-platform-portfolio`. This repository has no environment
-deployment root or live state. See [modules](modules/README.md) and
+Reusable modules for `ai-platform-portfolio`. The [ci](ci/README.md) root is the
+explicit exception for centrally operated infrastructure. See [modules](modules/README.md) and
 [provenance](PROVENANCE.md).
 
 Consumers use `git::https://github.com/ai-platform-portfolio/terraform-modules.git//modules/<name>?ref=<full-commit-sha>`.
@@ -15,4 +15,4 @@ Neither command applies resources or needs cloud credentials.
 
 Module interface and resource-address changes require review of consumer impact.
 Migrating existing addresses requires explicit moved blocks and a reviewed plan.
-This initial copy does not redesign networking or expand module capabilities.
+The network migration preserves existing Azure resources and address allocations.
