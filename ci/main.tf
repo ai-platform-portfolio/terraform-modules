@@ -13,7 +13,12 @@ module "network" {
 data "azurerm_subscription" "current" {}
 
 locals {
-  github_subject_prefix = "repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment"
+  github_subjects = merge([
+    for name, repo in var.github_repositories : {
+      "${name}-pr"    = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:pull_request"
+      "${name}-apply" = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:environment:${repo.apply_environment}"
+    }
+  ]...)
 }
 
 module "deployment_identity" {
@@ -26,9 +31,10 @@ module "deployment_identity" {
   oidc_issuer_url       = "https://token.actions.githubusercontent.com"
   workloads = {
     central-deployment = {
-      federated_subject = "${local.github_subject_prefix}:central-plan"
+      federated_subject = local.github_subjects["terraform-modules-pr"]
       extra_federated_subjects = {
-        apply = "${local.github_subject_prefix}:central-apply"
+        for key, subject in local.github_subjects : (key == "terraform-modules-apply" ? "apply" : key) => subject
+        if key != "terraform-modules-pr"
       }
     }
   }

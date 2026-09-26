@@ -1,0 +1,44 @@
+name: PR infrastructure plan
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: infrastructure-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  plan:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: 'true'
+      ARM_USE_OIDC: 'true'
+      ARM_USE_AZUREAD: 'true'
+      ARM_USE_CLI: 'false'
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_STATE_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_STATE_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_RESOURCE_NAME }}
+      TF_STATE_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+      TF_VAR_state_container_scope: ${{ secrets.TF_BACKEND_CONTAINER_SCOPE }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+      - name: Authenticate and initialize state
+        run: >-
+          terraform -chdir=ci init -input=false -lockfile=readonly -backend-config=backend.hcl
+          -backend-config="resource_group_name=$TF_STATE_RESOURCE_GROUP"
+          -backend-config="storage_account_name=$TF_STATE_STORAGE_ACCOUNT"
+          -backend-config="container_name=$TF_STATE_CONTAINER"
+      - name: Plan proposed infrastructure
+        run: terraform -chdir=ci plan -input=false -lock-timeout=5m

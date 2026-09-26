@@ -35,3 +35,18 @@ variable "state_container_scope" {
   type        = string
   sensitive   = true
 }
+
+variable "github_repositories" {
+  description = "Repositories trusted by the shared CI identity; two credentials per repository."
+  type = map(object({
+    owner             = string
+    owner_id          = string
+    name              = string
+    repository_id     = string
+    apply_environment = string
+  }))
+  validation {
+    condition     = contains(keys(var.github_repositories), "terraform-modules") && length(var.github_repositories) <= 10
+    error_message = "Include the control repository terraform-modules and stay within the MI's 20-credential limit."
+  }
+}
