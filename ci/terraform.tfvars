@@ -46,7 +46,7 @@ deployment_identity = {
       role_definition_name = "Owner"
     }
     state = {
-      scope_suffix         = "/resourceGroups/claudeaiportfolio/providers/Microsoft.Storage/storageAccounts/localtfsa/blobServices/default/containers/tfstate"
+      scope_suffix         = ""
       role_definition_name = "Storage Blob Data Contributor"
     }
   }

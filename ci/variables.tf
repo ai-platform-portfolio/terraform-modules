@@ -29,3 +29,9 @@ variable "deployment_identity" {
     }))
   })
 }
+
+variable "state_container_scope" {
+  description = "Existing Terraform state container resource ID, supplied from a secret."
+  type        = string
+  sensitive   = true
+}

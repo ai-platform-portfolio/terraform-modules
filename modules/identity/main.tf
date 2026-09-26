@@ -68,9 +68,9 @@ resource "azurerm_federated_identity_credential" "extra" {
 }
 
 resource "azurerm_role_assignment" "this" {
-  for_each             = var.role_assignments
-  scope                = each.value.scope
-  role_definition_name = each.value.role_definition_name
-  principal_id         = azurerm_user_assigned_identity.this[each.value.workload].principal_id
+  for_each             = toset([for key, assignment in var.role_assignments : key])
+  scope                = var.role_assignments[each.key].scope
+  role_definition_name = var.role_assignments[each.key].role_definition_name
+  principal_id         = azurerm_user_assigned_identity.this[var.role_assignments[each.key].workload].principal_id
   principal_type       = "ServicePrincipal"
 }

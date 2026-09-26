@@ -8,9 +8,9 @@ for Flex Consumption. It is separate from the ACA and private-endpoint subnets.
 Function integration uses `module.network.subnet_ids["functions"]`.
 Every apply still requires explicit owner approval.
 
-State remains in `localtfsa/tfstate`, using the `central-devops.tfstate` key.
-The storage resource group's old organisation name is an Azure name, not a
-GitHub dependency. Backend authentication uses Entra ID; no account key is needed.
+State remains in the existing Azure Storage backend, using the `central-devops.tfstate` key.
+Backend names are supplied from Secrets at initialization. Backend authentication
+uses Entra ID; no account key is needed.
 Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 
 ## Deployment workflow
@@ -56,11 +56,18 @@ The initial local bootstrap apply must create this identity and its credentials 
 can authenticate. That apply also includes the approved, unapplied functions
 subnet. Subsequent changes use this workflow and its deployment approval gate.
 
-Set repository variables `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`. Set
-`AZURE_CLIENT_ID` separately in `central-plan` and `central-apply`. These are
-identifiers, not credentials. No Azure client secret or storage key is used.
-After bootstrap, use the `deployment_client_id` Terraform output for both
-environment variables; do not use the old organisation's client ID.
+Store `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` and `AZURE_CLIENT_ID` as
+organization Actions secrets, granting access to this repository. Keep these
+identifiers out of Actions Variables. Authentication
+still uses OIDC; no Azure client secret or storage key is used.
+After bootstrap, use the `deployment_client_id` Terraform output for the
+organization secret; do not use the old organisation's client ID.
+Store backend identifiers in organization secrets `TF_BACKEND_RESOURCE_GROUP`,
+`TF_BACKEND_RESOURCE_NAME` (the storage account), `TF_BACKEND_CONTAINER` and
+`TF_BACKEND_CONTAINER_SCOPE`. Grant this repository access to those secrets.
+Storage-account and Key Vault names must not appear in tracked configuration or
+documentation. Local bootstrap inputs live under ignored `.migration/` with
+restricted permissions; saved Terraform plans and state still contain these values.
 The federated subjects must be:
 
 ```

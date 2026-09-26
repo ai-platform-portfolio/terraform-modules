@@ -31,7 +31,7 @@ module "deployment_identity" {
   role_assignments = {
     for key, role in var.deployment_identity.roles : key => {
       workload             = "central-deployment"
-      scope                = "${data.azurerm_subscription.current.id}${role.scope_suffix}"
+      scope                = key == "state" ? var.state_container_scope : "${data.azurerm_subscription.current.id}${role.scope_suffix}"
       role_definition_name = role.role_definition_name
     }
   }
