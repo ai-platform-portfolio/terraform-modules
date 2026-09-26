@@ -18,6 +18,16 @@ network = {
       name             = "private-endpoints"
       address_prefixes = ["10.50.2.0/24"]
     }
+    functions = {
+      name             = "functions"
+      address_prefixes = ["10.50.3.0/26"]
+      delegations = {
+        functions-delegation = {
+          service = "Microsoft.App/environments"
+          actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+        }
+      }
+    }
   }
   private_dns_zones = {
     postgres = "privatelink.postgres.database.azure.com"

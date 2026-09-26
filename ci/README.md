@@ -2,8 +2,11 @@
 
 `ci/` is the deployment root for shared portfolio infrastructure. Modules live
 under `modules/`; environment values live in `terraform.tfvars`. The initial
-configuration preserves the existing UK South network. Function integration
-and new subnet allocations are separate changes requiring owner review.
+configuration preserves the existing UK South network. The owner-approved
+`functions` subnet adds `10.50.3.0/26`, delegated to `Microsoft.App/environments`
+for Flex Consumption. It is separate from the ACA and private-endpoint subnets.
+Function integration uses `module.network.subnet_ids["functions"]`.
+Every apply still requires explicit owner approval.
 
 State remains in `localtfsa/tfstate`, using the `central-devops.tfstate` key.
 The storage resource group's old organisation name is an Azure name, not a
