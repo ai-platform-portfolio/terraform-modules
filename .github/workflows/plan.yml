@@ -7,6 +7,20 @@ concurrency:
   group: infrastructure-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 jobs:
+  infrastructure-plan-required:
+    needs: plan
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require a completed successful infrastructure plan
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+        run: |
+          if [ "$PLAN_RESULT" != success ]; then
+            echo "::error::A successful infrastructure plan is required; result was $PLAN_RESULT"
+            exit 1
+          fi
   plan:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
