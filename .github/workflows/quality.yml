@@ -3,8 +3,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  pull_request_review:
+    types: [submitted, dismissed]
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -18,21 +21,24 @@ jobs:
           terraform_wrapper: false
       - run: make test
   structure:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - id: standards
-        uses: ai-platform-portfolio/engineering-standards@a52ded96b6705a15a7d092cbfad2c056a13253bf
+        uses: ai-platform-portfolio/engineering-standards@11fa9212afd74b9e4e15f578a14c5e6cfc105798
       - name: Enforce module structure and comment policy
         env:
           CHECKER: ${{ steps.standards.outputs.checker }}
           TOOLS: ${{ steps.standards.outputs.tools }}
           BASE: ${{ github.event.pull_request.base.sha }}
-        run: '"$CHECKER" --base "$BASE" --tools "$TOOLS" --report reports/quality.json'
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: '"$CHECKER" --base "$BASE" --github-pr "$PR" --tools "$TOOLS" --report reports/quality.json'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
