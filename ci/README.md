@@ -32,6 +32,13 @@ OpenTofu 1.12.3 plan for same-repository PRs using `central-plan`. Fork PRs do n
 the deployment identity. All of these jobs use the same sandbox Owner MI; PR
 planning is not a read-only identity boundary.
 
+The required `infrastructure-plan-required` check succeeds only when the plan
+job succeeds. Failed, cancelled and skipped plans block merging, including fork
+PRs without access to the planning identity. Move an approved fork change to a
+trusted same-repository branch to run its plan. Repository controls and public
+visibility are checked by the shared
+[portfolio governance audit](https://github.com/ai-platform-portfolio/engineering-standards#ci-and-enforcement-status).
+
 The PR job updates one bot comment with its head commit and collapsible plan.
 Initialization or authentication errors post a failed preview and fail the check.
 Plan values marked sensitive stay hidden; Azure IDs, configured backend identifiers,
