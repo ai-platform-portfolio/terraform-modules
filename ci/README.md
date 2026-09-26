@@ -12,6 +12,10 @@ Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 
 ## Network ownership migration
 
+Completed on 2026-09-26; see [validation evidence](migrations/VALIDATION.md).
+The procedure below records the transfer and recovery requirements, not a task
+to rerun against the migrated state.
+
 Source: `claudeaiportfolio/portfolio-infra` at
 `67f2200b8537ff548206340ff423d4736b587a0f`, `terraform/network.tf`.
 Its network resources share `auth0.tfstate` with Auth0. Do not point this root
