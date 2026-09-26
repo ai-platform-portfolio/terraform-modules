@@ -15,6 +15,17 @@ Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 
 ## Deployment workflow
 
+Before pushing deployment changes, run `make preflight` from the repository root.
+It runs workflow lint, local validation/tests, and read-only GitHub/Azure checks
+for planning environment restrictions and the live federation credential. It
+requires Actionlint, ShellCheck, Terraform, and authenticated `gh` and `az` CLIs
+with the intended Azure subscription selected and the `ci` backend initialized.
+The identity is resolved from the sensitive Terraform output without printing it.
+A failure blocks readiness; obtain
+approval for any remote repair before retrying. These checks cannot mint a GitHub
+Actions token locally: after pushing, follow `gh pr checks <number> --watch` and
+require a successful backend-connected plan before calling the change verified.
+
 `.github/workflows/deploy.yml` runs on relevant merges to `main` and manual
 dispatches from `main`. `.github/workflows/plan.yml` authenticates and runs a real
 OpenTofu 1.12.3 plan for same-repository PRs using `central-plan`. Fork PRs do not receive
