@@ -1,5 +1,8 @@
 name: Module validation
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 permissions:
   contents: read
 jobs:
@@ -23,7 +26,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - id: standards
-        uses: ai-platform-portfolio/engineering-standards@8912666e66fd89ea451b2f616ca4a86c70908823
+        uses: ai-platform-portfolio/engineering-standards@a52ded96b6705a15a7d092cbfad2c056a13253bf
       - name: Enforce module structure and comment policy
         env:
           CHECKER: ${{ steps.standards.outputs.checker }}
