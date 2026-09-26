@@ -1,0 +1,37 @@
+name: Module validation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+      - run: make test
+  structure:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: standards
+        uses: ai-platform-portfolio/engineering-standards@8912666e66fd89ea451b2f616ca4a86c70908823
+      - name: Enforce module structure and comment policy
+        env:
+          CHECKER: ${{ steps.standards.outputs.checker }}
+          TOOLS: ${{ steps.standards.outputs.tools }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: '"$CHECKER" --base "$BASE" --tools "$TOOLS" --report reports/quality.json'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: module-quality
+          path: reports/quality.json
