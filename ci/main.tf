@@ -15,7 +15,7 @@ data "azurerm_subscription" "current" {}
 locals {
   github_subjects = merge([
     for name, repo in var.github_repositories : {
-      "${name}-pr"    = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:pull_request"
+      "${name}-plan"  = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:environment:${repo.plan_environment}"
       "${name}-apply" = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:environment:${repo.apply_environment}"
     }
   ]...)
@@ -31,10 +31,10 @@ module "deployment_identity" {
   oidc_issuer_url       = "https://token.actions.githubusercontent.com"
   workloads = {
     central-deployment = {
-      federated_subject = local.github_subjects["terraform-modules-pr"]
+      federated_subject = local.github_subjects["terraform-modules-plan"]
       extra_federated_subjects = {
         for key, subject in local.github_subjects : (key == "terraform-modules-apply" ? "apply" : key) => subject
-        if key != "terraform-modules-pr"
+        if key != "terraform-modules-plan"
       }
     }
   }

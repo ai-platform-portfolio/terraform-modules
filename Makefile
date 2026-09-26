@@ -1,5 +1,8 @@
 PYTHON ?= python3
-.PHONY: check test workflow-check
+.PHONY: check test workflow-check preflight
+preflight: workflow-check test
+	$(PYTHON) scripts/plan_preflight.py
+
 workflow-check:
 	@command -v shellcheck >/dev/null
 	actionlint

@@ -1,17 +1,27 @@
-"""Compare declared federation inputs with GitHub metadata and the actual PR token."""
+"""Compare declared federation inputs with GitHub metadata and the planning token."""
 
 import base64
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 from urllib.request import Request, urlopen
 
 
 def validate_repository(repo, actual):
-    for key in ("owner", "owner_id", "name", "repository_id", "apply_environment"):
+    for key in (
+        "owner",
+        "owner_id",
+        "name",
+        "repository_id",
+        "plan_environment",
+        "apply_environment",
+    ):
         if not isinstance(repo.get(key), str) or not repo[key].strip():
             raise ValueError(f"Federation field is missing or empty: {key}")
+    if repo["plan_environment"] == repo["apply_environment"]:
+        raise ValueError("Planning and apply environments must be distinct")
     if not all(
         re.fullmatch(r"[1-9][0-9]*", repo[key]) for key in ("owner_id", "repository_id")
     ):
@@ -25,14 +35,14 @@ def validate_repository(repo, actual):
 
 
 def validate_claims(repo, claims):
-    expected = f"repo:{repo['owner']}@{repo['owner_id']}/{repo['name']}@{repo['repository_id']}:pull_request"
+    expected = f"repo:{repo['owner']}@{repo['owner_id']}/{repo['name']}@{repo['repository_id']}:environment:{repo['plan_environment']}"
     if (
         claims.get("iss") != "https://token.actions.githubusercontent.com"
         or claims.get("aud") != "api://AzureADTokenExchange"
         or claims.get("sub") != expected
     ):
         raise ValueError(
-            "Actual GitHub PR token does not match the proposed federation contract"
+            "Actual GitHub planning token does not match the proposed federation contract"
         )
 
 
@@ -62,3 +72,10 @@ def verify(api):
         current,
         json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))),
     )
+
+
+if __name__ == "__main__":
+    verify(
+        lambda name: json.loads(subprocess.check_output(["gh", "api", f"repos/{name}"]))
+    )
+    print("Planning federation contract verified")

@@ -43,6 +43,7 @@ variable "github_repositories" {
     owner_id          = string
     name              = string
     repository_id     = string
+    plan_environment  = string
     apply_environment = string
   }))
   validation {
@@ -53,8 +54,9 @@ variable "github_repositories" {
     condition = alltrue([for repo in values(var.github_repositories) :
       can(regex("^[1-9][0-9]*$", repo.owner_id)) && can(regex("^[1-9][0-9]*$", repo.repository_id)) &&
       can(regex("^[A-Za-z0-9-]+$", repo.owner)) && can(regex("^[A-Za-z0-9_.-]+$", repo.name)) &&
-      can(regex("^[A-Za-z0-9_-]+$", repo.apply_environment))
+      can(regex("^[A-Za-z0-9_-]+$", repo.plan_environment)) &&
+      can(regex("^[A-Za-z0-9_-]+$", repo.apply_environment)) && repo.plan_environment != repo.apply_environment
     ])
-    error_message = "Repository names, positive numeric immutable IDs and apply environment must be present and valid."
+    error_message = "Repository names, positive numeric immutable IDs and distinct plan/apply environments must be present and valid."
   }
 }
