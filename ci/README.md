@@ -16,16 +16,32 @@ Set `ARM_SUBSCRIPTION_ID` to the owning subscription before planning.
 ## Deployment workflow
 
 `.github/workflows/deploy.yml` runs on relevant merges to `main` and manual
-dispatches from `main`. PRs run validation without Azure credentials.
+dispatches from `main`. `.github/workflows/plan.yml` authenticates and runs a real
+OpenTofu 1.12.3 plan for same-repository PRs without a GitHub environment. Fork PRs do not receive
+the deployment identity. All of these jobs use the same sandbox Owner MI; PR
+planning is not a read-only identity boundary.
 
-1. `plan` authenticates using GitHub OIDC and the `central-plan` environment.
+The PR job updates one bot comment with its head commit and collapsible plan.
+Initialization or authentication errors post a failed preview and fail the check.
+Plan values marked sensitive stay hidden; Azure IDs, configured backend identifiers,
+storage-account names and Key Vault names are redacted before publishing. Raw plans
+are deleted on the runner and never uploaded. Superseded runs cannot update the
+current revision's comment. A success requires a real backend-connected plan.
+
+PR previews use `opentofu.lock.hcl`, copied to the runner's active lock filename.
+Main deployment still uses Terraform 1.12.2 and its existing lock; the read-only
+preview does not migrate live state or change the deployment engine.
+
+1. `plan` authenticates using GitHub OIDC and the `central-apply` environment.
+   Approve this environment before the main plan job starts.
    Both jobs use the dedicated sandbox Owner identity, as approved by the owner.
    The plan command does not apply resources, but its identity is write-capable.
    Terraform takes a state lease during planning.
 2. Review the Terraform plan log, commit and fingerprint in the run summary.
    No-change plans skip deployment. Saved plans stay on the temporary runner;
    no state or plan files are uploaded to GitHub artifacts.
-3. Approve `central-apply` through **Review deployments** on that workflow run.
+3. After reviewing the plan, approve the apply job's `central-apply` request through
+   **Review deployments** on that workflow run.
    The environment requires `michaela-links`, permits only `main`, and disables
    administrator bypass. Self-review remains enabled for the solo portfolio owner.
 4. The apply job rejects a superseded commit and produces a fresh, locked plan.
@@ -42,8 +58,12 @@ is not a deployment queue for every commit.
 ### Azure bootstrap
 
 GitHub environments are configured. `module.deployment_identity` creates
-`ai-platform-central-deployment` in `ai-platform-ci-rg`, with two GitHub environment
-federations. Its name has no regional suffix; its Azure location is independent
+`ai-platform-central-deployment` in `ai-platform-ci-rg`, with a PR and an apply
+federation per entry in `github_repositories` in `github.auto.tfvars.json`. Adding a
+repository extends that map, not the MI count. The control repository retains
+its existing Terraform credential addresses to avoid replacement. The MI supports
+at most ten repositories with this two-credential pattern. Its name has no regional
+suffix; its Azure location is independent
 of its subscription-wide deployment permissions. The old organisation's identity
 is untouched.
 
@@ -52,9 +72,9 @@ on the existing `tfstate` container supplies state data-plane access; Owner alon
 does not supply that access. This container also holds legacy state. Workload
 identities should receive permissions appropriate to their individual workloads.
 
-The initial local bootstrap apply must create this identity and its credentials before GitHub
-can authenticate. That apply also includes the approved, unapplied functions
-subnet. Subsequent changes use this workflow and its deployment approval gate.
+The initial local bootstrap created the identity and functions subnet. Federation
+repairs require an explicitly approved bootstrap when CI authentication is broken.
+Subsequent changes use this workflow and its deployment approval gate.
 
 Store `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` and `AZURE_CLIENT_ID` as
 organization Actions secrets, granting access to this repository. Keep these
@@ -71,14 +91,28 @@ restricted permissions; saved Terraform plans and state still contain these valu
 The federated subjects must be:
 
 ```
-repo:ai-platform-portfolio/terraform-modules:environment:central-plan
-repo:ai-platform-portfolio/terraform-modules:environment:central-apply
+repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:pull_request
+repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-apply
 ```
 
 Issuer: `https://token.actions.githubusercontent.com`; audience:
-`api://AzureADTokenExchange`. Federation must not trust pull-request subjects.
+`api://AzureADTokenExchange`. There is no per-branch or plan-environment credential.
+This explicitly trusts PR jobs with the shared Owner permissions, as chosen for
+the sandbox. Keep the apply environment's required reviewer and main-only policy.
+The obsolete `central-plan` environment is no longer referenced by any workflow.
 Azure federation provisioning requires an owner-approved Terraform bootstrap
 plan; a repository merge does not provide that approval.
+
+Before initialization, the PR job checks required fields against GitHub's live
+repository metadata and compares an actual GitHub-issued token's issuer, audience
+and subject with the proposed PR trust. Tokens stay in memory and are not logged.
+The JSON tfvars file is the same input consumed by Terraform and this check.
+
+Mocked tests check the exact subjects and map expansion. They do not prove live
+authentication. After bootstrap, the PR job must successfully exchange its token,
+initialize the real backend and plan. The protected main jobs must also pass
+authentication in their distinct environment context before deployment is called
+verified. Never print OIDC tokens or persist them as artifacts.
 
 ## Network ownership migration
 
