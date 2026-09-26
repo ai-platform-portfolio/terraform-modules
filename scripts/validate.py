@@ -19,14 +19,26 @@ def main():
     failures = []
     for directory in directories:
         try:
+            lock_options = ["-lockfile=readonly"] if directory == root / "ci" else []
             subprocess.run(
-                ["terraform", "init", "-backend=false", "-input=false", "-no-color"],
+                [
+                    "terraform",
+                    "init",
+                    "-backend=false",
+                    "-input=false",
+                    "-no-color",
+                    *lock_options,
+                ],
                 cwd=directory,
                 check=True,
             )
-            subprocess.run(["terraform", "validate", "-no-color"], cwd=directory, check=True)
+            subprocess.run(
+                ["terraform", "validate", "-no-color"], cwd=directory, check=True
+            )
             if args.test and (directory / "tests").exists():
-                subprocess.run(["terraform", "test", "-no-color"], cwd=directory, check=True)
+                subprocess.run(
+                    ["terraform", "test", "-no-color"], cwd=directory, check=True
+                )
         except subprocess.CalledProcessError:
             failures.append(str(directory.relative_to(root)))
     if failures:
