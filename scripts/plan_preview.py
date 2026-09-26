@@ -16,7 +16,7 @@ def redact(text, secrets, plan=None):
 
     def visit(value):
         if isinstance(value, dict):
-            if value.get("type") in {"azurerm_storage_account", "azurerm_key_vault"}:
+            if value.get("type") in ("azurerm_storage_account", "azurerm_key_vault"):
                 for attributes in (
                     value.get("values", {}),
                     value.get("change", {}).get("before"),

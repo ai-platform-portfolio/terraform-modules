@@ -9,6 +9,7 @@ from plan_preview import MARKER, comment_body, preview, publish, redact
 class PlanPreviewTest(unittest.TestCase):
     def test_plan_values_are_redacted_but_changes_remain(self):
         plan = {
+            "outputs": {"ids": {"type": ["map", "string"]}},
             "resource_changes": [
                 {
                     "type": "azurerm_key_vault",
