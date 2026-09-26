@@ -62,6 +62,7 @@ jobs:
               (.branch_policies | length) == 1 and
               .branch_policies[0].name == "main" and
               .branch_policies[0].type == "branch"'
+          done
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: 1.12.2
