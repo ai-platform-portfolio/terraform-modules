@@ -24,11 +24,12 @@ run "github_subject_matches_observed_repository_claim" {
 
   assert {
     condition = local.github_subjects == {
+      ops-shared-plan         = "repo:ai-platform-portfolio@334196300/ops-shared@1389842744:environment:central-plan"
       ops-shared-apply        = "repo:ai-platform-portfolio@334196300/ops-shared@1389842744:environment:central-apply"
       terraform-modules-plan  = "repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-plan"
       terraform-modules-apply = "repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-apply"
     }
-    error_message = "Preserve both infrastructure credentials and add only the ops-shared apply credential."
+    error_message = "Only the two infrastructure repositories may plan the central estate; every other repository is apply-only."
   }
 }
 
