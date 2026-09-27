@@ -15,8 +15,9 @@ data "azurerm_subscription" "current" {}
 locals {
   github_subjects = merge([
     for name, repo in var.github_repositories : {
-      "${name}-plan"  = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:environment:${repo.plan_environment}"
-      "${name}-apply" = "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:environment:${repo.apply_environment}"
+      for phase, environment in { plan = repo.plan_environment, apply = repo.apply_environment } :
+      "${name}-${phase}" => "repo:${repo.owner}@${repo.owner_id}/${repo.name}@${repo.repository_id}:environment:${environment}"
+      if environment != null
     }
   ]...)
 }

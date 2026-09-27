@@ -9,18 +9,20 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 
-def validate_repository(repo, actual):
-    for key in (
+def validate_repository(repo, actual, *, planning=True):
+    keys = [
         "owner",
         "owner_id",
         "name",
         "repository_id",
-        "plan_environment",
         "apply_environment",
-    ):
+    ]
+    if planning or repo.get("plan_environment") is not None:
+        keys.append("plan_environment")
+    for key in keys:
         if not isinstance(repo.get(key), str) or not repo[key].strip():
             raise ValueError(f"Federation field is missing or empty: {key}")
-    if repo["plan_environment"] == repo["apply_environment"]:
+    if repo.get("plan_environment") == repo["apply_environment"]:
         raise ValueError("Planning and apply environments must be distinct")
     if not all(
         re.fullmatch(r"[1-9][0-9]*", repo[key]) for key in ("owner_id", "repository_id")
@@ -53,7 +55,7 @@ def verify(api):
     current = None
     for repo in repositories.values():
         name = f"{repo.get('owner', '')}/{repo.get('name', '')}"
-        validate_repository(repo, api(name))
+        validate_repository(repo, api(name), planning=name == os.environ["GITHUB_REPOSITORY"])
         if name == os.environ["GITHUB_REPOSITORY"]:
             current = repo
     if current is None:

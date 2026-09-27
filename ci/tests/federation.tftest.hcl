@@ -24,10 +24,11 @@ run "github_subject_matches_observed_repository_claim" {
 
   assert {
     condition = local.github_subjects == {
+      ops-shared-apply        = "repo:ai-platform-portfolio@334196300/ops-shared@1389842744:environment:central-apply"
       terraform-modules-plan  = "repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-plan"
       terraform-modules-apply = "repo:ai-platform-portfolio@334196300/terraform-modules@1389557192:environment:central-apply"
     }
-    error_message = "Trust exactly the plan and apply environments, without PR or branch credentials."
+    error_message = "Preserve both infrastructure credentials and add only the ops-shared apply credential."
   }
 }
 

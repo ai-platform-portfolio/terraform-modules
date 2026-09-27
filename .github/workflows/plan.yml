@@ -55,5 +55,6 @@ jobs:
           tofu_wrapper: false
       - name: Plan and update PR preview
         run: |
+          python3 scripts/discover_federation.py
           cp ci/opentofu.lock.hcl ci/.terraform.lock.hcl
           python3 scripts/plan_preview.py
