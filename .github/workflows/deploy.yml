@@ -8,8 +8,11 @@ on:
       - 'modules/**'
       - 'scripts/deployment_plan.py'
       - 'scripts/federation_contract.py'
+      - 'scripts/discover_federation.py'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
+  repository_dispatch:
+    types: [repository-onboarding]
 
 permissions:
   contents: read
@@ -25,6 +28,8 @@ env:
   TF_STATE_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_RESOURCE_NAME }}
   TF_STATE_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
   TF_VAR_state_container_scope: ${{ secrets.TF_BACKEND_CONTAINER_SCOPE }}
+  TF_VAR_function_storage: ${{ secrets.FUNCTION_STORAGE }}
+  TF_VAR_function_vault: ${{ secrets.FUNCTION_VAULT }}
 
 jobs:
   plan:
@@ -53,7 +58,7 @@ jobs:
             any(.protection_rules[];
               .type == "required_reviewers" and
               (.reviewers | length) == 1 and
-              .reviewers[0].reviewer.login == "michaela-links")'
+              .reviewers[0].reviewer.login == "michaelalinks")'
           gh api "repos/$GITHUB_REPOSITORY/environments/central-apply/deployment-branch-policies" | jq -e '
               (.branch_policies | length) == 1 and
               .branch_policies[0].name == "main" and
@@ -65,7 +70,9 @@ jobs:
       - name: Verify planning federation contract
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/federation_contract.py
+        run: |
+          python3 scripts/discover_federation.py
+          python3 scripts/federation_contract.py
       - run: >-
           terraform -chdir=ci init -input=false -lockfile=readonly -backend-config=backend.hcl
           -backend-config="resource_group_name=$TF_STATE_RESOURCE_GROUP"
@@ -84,7 +91,7 @@ jobs:
       group: central-infrastructure
       cancel-in-progress: false
     needs: plan
-    if: needs.plan.outputs.changes == 'true'
+    if: needs.plan.outputs.changes == 'true' && github.event_name != 'repository_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: central-apply
@@ -101,6 +108,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$GITHUB_SHA"
+      - name: Refresh repository federation inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/discover_federation.py
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: 1.12.2

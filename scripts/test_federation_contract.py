@@ -44,3 +44,12 @@ class FederationContractTest(unittest.TestCase):
                 validate_repository(
                     dict(self.repo, plan_environment=value), self.actual
                 )
+
+    def test_code_only_repository_needs_no_planning_trust(self):
+        repo = dict(self.repo)
+        del repo["plan_environment"]
+        validate_repository(repo, self.actual, planning=False)
+        with self.assertRaises(ValueError):
+            validate_repository(repo, self.actual)
+        with self.assertRaises(ValueError):
+            validate_repository(dict(repo, apply_environment=""), self.actual, planning=False)

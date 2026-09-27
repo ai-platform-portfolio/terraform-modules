@@ -1,5 +1,39 @@
 # Central infrastructure
 
+## Organisation profile sync (AI-5)
+
+`functions.tf` calls `modules/function-app` using the map in
+`functions.auto.tfvars.json`. The profile worker uses the existing Functions
+subnet and public HTTPS ingress for signed GitHub webhooks. Existing vault and
+storage network policies are unchanged. The runtime identity has access to its
+host/deployment containers, sync queues and two named vault secrets; it has no
+access to the Terraform state container or subscription Owner role.
+
+`FUNCTION_STORAGE` and `FUNCTION_VAULT` are organisation Secrets restricted to this
+repository. They contain existing resource references, never app private-key values.
+The existing app private-key secret is `ai-platform-portfolio-ops`; a separate
+`ai-platform-portfolio-ops-webhook` signing secret must exist before code deployment.
+Secret creation is an owner-approved bootstrap action, not a value committed here.
+
+Infrastructure uses the normal PR plan and protected main apply. After that apply,
+`ops-shared/.github/workflows/functions.yml` is manually dispatched from main and
+gated by that repository's `central-apply` environment. It builds hash-locked
+Linux dependencies from the exact ops-shared workflow commit and deploys with
+GitHub OIDC. This repository owns infrastructure, not Function code publication. Every
+apply and code deployment still requires the owner's immediate approval.
+
+Configure the installed GitHub App with Repository events, SSL verification and
+`https://<function-host>/api/github` after deployment. The webhook signing secret
+must match its vault value. `.github` merge-policy handling needs the owner's
+explicit decision before automatic README writes can succeed. Record a real
+metadata change, valid and invalid signatures, duplicate delivery and private-repo
+exclusion in AI-5 before calling sync operational. Runtime details and acceptance
+tests live in ops-shared `functions/profile_sync`.
+
+Rollback code with a reviewed revert in ops-shared and redeploy its main revision
+through the same approval gate. Disable the app webhook to stop event ingress;
+the hourly repair timer must also be stopped if all reconciliation must cease.
+
 `ci/` is the deployment root for shared portfolio infrastructure. Modules live
 under `modules/`; environment values live in `terraform.tfvars`. The initial
 configuration preserves the existing UK South network. The owner-approved
@@ -67,7 +101,7 @@ Commit the resulting lock file. The Linux PR validation must pass without updati
    no state or plan files are uploaded to GitHub artifacts.
 3. After reviewing the plan, approve the apply job's `central-apply` request through
    **Review deployments** on that workflow run.
-   The environment requires `michaela-links`, permits only `main`, and disables
+   The environment requires `michaelalinks`, permits only `main`, and disables
    administrator bypass. Self-review remains enabled for the solo portfolio owner.
 4. The apply job rejects a superseded commit and produces a fresh, locked plan.
    Its complete JSON fingerprint must match the reviewed plan, excluding only
@@ -83,11 +117,11 @@ is independent of this queue and runs fresh on every relevant main push.
 ### Azure bootstrap
 
 GitHub environments are configured. `module.deployment_identity` creates
-`ai-platform-central-deployment` in `ai-platform-ci-rg`, with a plan and an apply
-federation per entry in `github_repositories` in `github.auto.tfvars.json`. Adding a
-repository extends that map, not the MI count. The control repository retains
-its existing Terraform credential addresses to avoid replacement. The MI supports
-at most ten repositories with this two-credential pattern. Its name has no regional
+`ai-platform-central-deployment` in `ai-platform-ci-rg`, with an apply credential
+per repository and optional planning trust. Adding repositories extends the map,
+not the MI count. The control repository retains its existing credential addresses.
+The MI supports at most 20 credentials; discovery and Terraform reject overflow.
+Its name has no regional
 suffix; its Azure location is independent
 of its subscription-wide deployment permissions. The old organisation's identity
 is untouched.
@@ -126,6 +160,31 @@ This explicitly trusts PR jobs with the shared Owner permissions, as chosen for
 the sandbox. Keep the apply environment's required reviewer and main-only policy.
 Azure federation provisioning requires an owner-approved Terraform bootstrap
 plan; a repository merge does not provide that approval.
+
+### Optional automatic repository enrollment — AI-16
+
+This org enables `ci/onboarding.json`. Before each PR, main and approved apply
+plan, `scripts/discover_federation.py` reads the public org repository inventory
+and expands runner-local Terraform inputs. Every repository gets `central-apply`
+trust even without an Azure workflow; only explicitly configured infrastructure
+repositories receive planning trust. Existing explicit entries preserve their IDs
+and names. Missing/disabled configuration opts out; nothing is installed downstream.
+Discovery is limited to public repositories, matching the org's public portfolio policy.
+
+The authenticated webhook's optional `AUTO_ENROLL_REPOSITORIES` setting sends a
+`repository-onboarding` dispatch to this repository. That event runs a fresh plan
+but skips apply. The owner initiates the normal CI deployment and approves its
+fresh plan; changed inventory after review invalidates its fingerprint. No webhook
+or local hook executes Azure writes. Disabling enrollment can propose removal of
+previously discovered trust; review that plan before applying.
+
+Ops-shared's explicit subject is
+`repo:ai-platform-portfolio@334196300/ops-shared@1389842744:environment:central-apply`.
+Its environment must require the owner, disable administrator bypass and allow
+main only. Grant ops-shared the three existing Azure identity Secrets, not backend
+or vault/storage Secrets. Code publishing checks environment controls and actual
+OIDC claims before Azure login. Successful Azure authentication and publication
+still require live evidence; a passing mock does not establish applied trust.
 
 Before initialization, both planning jobs check required fields against GitHub's live
 repository metadata and compares an actual GitHub-issued token's issuer, audience
