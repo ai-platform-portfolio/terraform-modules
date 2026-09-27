@@ -43,7 +43,6 @@ jobs:
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     outputs:
-      fingerprint: ${{ steps.review.outputs.fingerprint }}
       changes: ${{ steps.review.outputs.changes }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -84,6 +83,14 @@ jobs:
         run: terraform -chdir=ci plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/review.tfplan"
       - id: review
         run: python3 scripts/deployment_plan.py "$RUNNER_TEMP/review.tfplan"
+      - name: Publish the reviewed plan
+        if: steps.review.outputs.changes == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: central-infrastructure-plan
+          path: ${{ runner.temp }}/review.tfplan
+          retention-days: 1
+          if-no-files-found: error
       - name: Remove local plan
         if: always()
         run: rm -f "$RUNNER_TEMP/review.tfplan"
@@ -107,10 +114,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$GITHUB_SHA"
-      - name: Refresh repository federation inventory
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/discover_federation.py
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: 1.12.2
@@ -120,14 +123,13 @@ jobs:
           -backend-config="resource_group_name=$TF_STATE_RESOURCE_GROUP"
           -backend-config="storage_account_name=$TF_STATE_STORAGE_ACCOUNT"
           -backend-config="container_name=$TF_STATE_CONTAINER"
-      - name: Re-plan after deployment approval
-        run: terraform -chdir=ci plan -input=false -lock-timeout=5m -out="$RUNNER_TEMP/approved.tfplan"
-      - name: Require the reviewed plan
-        env:
-          EXPECTED_FINGERPRINT: ${{ needs.plan.outputs.fingerprint }}
-        run: python3 scripts/deployment_plan.py "$RUNNER_TEMP/approved.tfplan" --expected "$EXPECTED_FINGERPRINT"
-      - name: Apply the verified saved plan
-        run: terraform -chdir=ci apply -input=false -lock-timeout=5m "$RUNNER_TEMP/approved.tfplan"
+      - name: Download the reviewed plan
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: central-infrastructure-plan
+          path: ${{ runner.temp }}
+      - name: Apply the reviewed plan
+        run: terraform -chdir=ci apply -input=false -lock-timeout=5m "$RUNNER_TEMP/review.tfplan"
       - name: Remove local plan
         if: always()
-        run: rm -f "$RUNNER_TEMP/approved.tfplan"
+        run: rm -f "$RUNNER_TEMP/review.tfplan"
