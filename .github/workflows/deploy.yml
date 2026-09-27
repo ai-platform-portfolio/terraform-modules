@@ -58,7 +58,7 @@ jobs:
             any(.protection_rules[];
               .type == "required_reviewers" and
               (.reviewers | length) == 1 and
-              .reviewers[0].reviewer.login == "michaela-links")'
+              .reviewers[0].reviewer.login == "michaelalinks")'
           gh api "repos/$GITHUB_REPOSITORY/environments/central-apply/deployment-branch-policies" | jq -e '
               (.branch_policies | length) == 1 and
               .branch_policies[0].name == "main" and

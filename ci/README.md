@@ -101,7 +101,7 @@ Commit the resulting lock file. The Linux PR validation must pass without updati
    no state or plan files are uploaded to GitHub artifacts.
 3. After reviewing the plan, approve the apply job's `central-apply` request through
    **Review deployments** on that workflow run.
-   The environment requires `michaela-links`, permits only `main`, and disables
+   The environment requires `michaelalinks`, permits only `main`, and disables
    administrator bypass. Self-review remains enabled for the solo portfolio owner.
 4. The apply job rejects a superseded commit and produces a fresh, locked plan.
    Its complete JSON fingerprint must match the reviewed plan, excluding only
