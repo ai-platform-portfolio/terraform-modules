@@ -17,6 +17,10 @@ variable "function_apps" {
     queues                 = set(string)
     secret_names           = set(string)
     settings               = map(string)
-    source                 = object({ repository = string, revision = string, path = string })
+    source                 = object({ repository = string, revision = string, path = string, format = string })
   }))
+  validation {
+    condition     = alltrue([for app in var.function_apps : app.source.format == "zip"])
+    error_message = "The implemented Flex Consumption host requires ZIP packages; custom container images are unsupported."
+  }
 }

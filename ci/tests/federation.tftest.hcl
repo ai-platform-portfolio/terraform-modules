@@ -8,6 +8,15 @@ mock_provider "azurerm" {
 
 variables {
   state_container_scope = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test/providers/Microsoft.Storage/storageAccounts/test/blobServices/default/containers/state"
+  function_storage = {
+    name                = "fixturestorage"
+    resource_group_name = "fixture"
+  }
+  function_vault = {
+    name = "fixture-vault"
+    id   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/fixture/providers/Microsoft.KeyVault/vaults/fixture-vault"
+  }
+  function_apps = {}
 }
 
 run "github_subject_matches_observed_repository_claim" {

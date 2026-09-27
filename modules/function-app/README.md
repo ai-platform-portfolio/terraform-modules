@@ -8,6 +8,14 @@ The implemented hosting tier is Flex Consumption. Additional hosting tiers belon
 in this module when needed, with tier-specific validation; there is no separate
 tier-named module. Code packages are deployed separately through approved CI.
 
+The owner confirmed Flex Consumption with ZIP deployment on 2026-09-27.
+Docker is a preference when supported, not a reason to replace this hosting plan.
+[Microsoft's deployment matrix](https://learn.microsoft.com/en-us/azure/azure-functions/functions-deployment-technologies)
+requires package deployment for Flex. The central input validation and code
+deployment preflight reject other package formats. Required validation tests
+exercise an incompatible Docker request and the actual checked-in application
+configuration. See [AI-15](https://linear.app/ai-platform-portfolio/issue/AI-15).
+
 Exactly one deployment per storage account owns the shared host containers through
 `create_host_containers = true`; other apps reuse them. Import existing containers
 into that owner's state before applying if they already exist.

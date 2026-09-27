@@ -8,6 +8,8 @@ import re
 
 def source(config, application):
     app = config["function_apps"][application]
+    if app["source"].get("format") != "zip":
+        raise ValueError("Flex Consumption requires a ZIP package; custom images are unsupported")
     result = {"name": app["name"], **app["source"]}
     if not re.fullmatch(r"[a-z0-9-]+", result["name"]):
         raise ValueError("Invalid Function name")
