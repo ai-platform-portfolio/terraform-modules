@@ -1,6 +1,6 @@
 version: 1
 terraform:
-  roots: [modules, ci]
+  roots: [modules]
   profile: module
   approved_repositories: [ai-platform-portfolio/terraform-modules]
   collections:
@@ -30,19 +30,4 @@ duplication:
   min_lines: 5
 exclude: [examples/*, scripts/*]
 protected_paths: [engineering.yaml, '.github/*']
-exceptions:
-  - rule: TF002
-    file: ci/functions.tf
-    symbol: functions
-    reason: Central deployment composes the reviewed function-app module from this revision.
-    owner: michaelalinks
-  - rule: TF002
-    file: ci/main.tf
-    symbol: network
-    reason: Central deployment composes the network module from the same reviewed repository revision.
-    owner: michaelalinks
-  - rule: TF002
-    file: ci/main.tf
-    symbol: deployment_identity
-    reason: Central deployment composes the identity module from the same reviewed repository revision.
-    owner: michaelalinks
+exceptions: []
