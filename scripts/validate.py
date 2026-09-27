@@ -8,6 +8,13 @@ def main():
     parser.add_argument("--test", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
+    misplaced = [path for path in root.rglob("*.tf")
+                 if ".terraform" not in path.parts
+                 and path.relative_to(root).parts[0] not in {"modules", "examples"}]
+    if misplaced:
+        print("Deployment roots belong in implementation repositories: " +
+              ", ".join(str(path.relative_to(root)) for path in misplaced))
+        return 1
     subprocess.run(["terraform", "fmt", "-check", "-recursive"], cwd=root, check=True)
     directories = sorted(
         path
@@ -15,11 +22,9 @@ def main():
         for path in (root / parent).iterdir()
         if path.is_dir()
     )
-    directories.append(root / "ci")
     failures = []
     for directory in directories:
         try:
-            lock_options = ["-lockfile=readonly"] if directory == root / "ci" else []
             subprocess.run(
                 [
                     "terraform",
@@ -27,7 +32,6 @@ def main():
                     "-backend=false",
                     "-input=false",
                     "-no-color",
-                    *lock_options,
                 ],
                 cwd=directory,
                 check=True,
