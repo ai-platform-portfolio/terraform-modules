@@ -42,6 +42,8 @@ jobs:
       TF_STATE_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_RESOURCE_NAME }}
       TF_STATE_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
       TF_VAR_state_container_scope: ${{ secrets.TF_BACKEND_CONTAINER_SCOPE }}
+      TF_VAR_function_storage: ${{ secrets.FUNCTION_STORAGE }}
+      TF_VAR_function_vault: ${{ secrets.FUNCTION_VAULT }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

@@ -1,5 +1,38 @@
 # Central infrastructure
 
+## Organisation profile sync (AI-5)
+
+`functions.tf` calls `modules/function-app` using the map in
+`functions.auto.tfvars.json`. The profile worker uses the existing Functions
+subnet and public HTTPS ingress for signed GitHub webhooks. Existing vault and
+storage network policies are unchanged. The runtime identity has access to its
+host/deployment containers, sync queues and two named vault secrets; it has no
+access to the Terraform state container or subscription Owner role.
+
+`FUNCTION_STORAGE` and `FUNCTION_VAULT` are organisation Secrets restricted to this
+repository. They contain existing resource references, never app private-key values.
+The existing app private-key secret is `ai-platform-portfolio-ops`; a separate
+`ai-platform-portfolio-ops-webhook` signing secret must exist before code deployment.
+Secret creation is an owner-approved bootstrap action, not a value committed here.
+
+Infrastructure uses the normal PR plan and protected main apply. After that apply,
+`Deploy central Function code` is manually dispatched from main and gated by
+`central-apply`. It builds Linux dependencies from the hash-locked requirements at
+the exact ops-shared commit in the app map, then deploys with GitHub OIDC. Every
+apply and code deployment still requires the owner's immediate approval.
+
+Configure the installed GitHub App with Repository events, SSL verification and
+`https://<function-host>/api/github` after deployment. The webhook signing secret
+must match its vault value. `.github` merge-policy handling needs the owner's
+explicit decision before automatic README writes can succeed. Record a real
+metadata change, valid and invalid signatures, duplicate delivery and private-repo
+exclusion in AI-5 before calling sync operational. Runtime details and acceptance
+tests live in ops-shared `functions/profile_sync`.
+
+Rollback code by reviewing a prior source SHA in the app map and deploying it
+through the same approval gate. Disable the app webhook to stop event ingress;
+the hourly repair timer must also be stopped if all reconciliation must cease.
+
 `ci/` is the deployment root for shared portfolio infrastructure. Modules live
 under `modules/`; environment values live in `terraform.tfvars`. The initial
 configuration preserves the existing UK South network. The owner-approved

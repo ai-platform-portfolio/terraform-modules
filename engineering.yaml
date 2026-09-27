@@ -32,6 +32,11 @@ exclude: [examples/*, scripts/*]
 protected_paths: [engineering.yaml, '.github/*']
 exceptions:
   - rule: TF002
+    file: ci/functions.tf
+    symbol: functions
+    reason: Central deployment composes the reviewed function-app module from this revision.
+    owner: michaela-links
+  - rule: TF002
     file: ci/main.tf
     symbol: network
     reason: Central deployment composes the network module from the same reviewed repository revision.
